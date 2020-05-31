@@ -57,10 +57,11 @@ async def handle_zip(request):
     chunk_size = 1024 * 1024
     logger.info('Sending "%s" -> "%s"', path, name)
     proc = await asyncio.create_subprocess_exec(
-        'zip', '-r', '-0', '-', path,
+        'zip', '-r', '-0', '-', '.',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        limit=chunk_size
+        limit=chunk_size,
+        cwd=path
     )
     ziplogger = logging.getLogger('zip ({})'.format(proc.pid))
     watchdog.register(proc)
