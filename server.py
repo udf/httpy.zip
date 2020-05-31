@@ -32,14 +32,9 @@ async def handle_reload_list(request):
 
 
 async def log_stream(stream, logger):
-    err = await stream.read()
-    if not err:
-        return
-    for line in err.decode().split('\n'):
-        line = line.strip()
-        if not line:
-            continue
-        logger.info(line)
+    while not stream.at_eof():
+        line = await stream.readline()
+        logger.info(line.decode().strip())
 
 
 async def handle_zip(request):
@@ -63,18 +58,17 @@ async def handle_zip(request):
         limit=chunk_size,
         cwd=path
     )
-    ziplogger = logging.getLogger('zip ({})'.format(proc.pid))
     watchdog.register(proc)
+    asyncio.ensure_future(log_stream(
+        proc.stderr,
+        logging.getLogger('zip ({})'.format(proc.pid))
+    ))
 
     while not proc.stdout.at_eof():
-        await log_stream(proc.stderr, ziplogger)
-
         chunk = await proc.stdout.read(chunk_size)
         if chunk:
             watchdog.ping(proc)
             await response.write(chunk)
-
-    await log_stream(proc.stderr, ziplogger)
 
     watchdog.deregister(proc)
     return_code = await asyncio.wait_for(proc.wait(), timeout=1)
