@@ -1,17 +1,35 @@
 import asyncio
-import shlex
+import json
 import logging
+import os
+import shlex
 from aiohttp import web
 
-import sys
 import watchdog
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
-dir_paths = {
-    'brain.zip': '/booty/Anime/Dr. Stone'
-}
+dir_paths = {}
+
+
+def reload_list():
+    global dir_paths
+    with open('zip_paths.json') as f:
+        dir_paths = json.load(f)
+    missing = []
+    for zip_name, path in dir_paths.items():
+        if not os.path.exists(path):
+            missing.append(path)
+    return missing
+
+
+async def handle_reload_list(request):
+    missing = reload_list()
+    text = ''
+    if missing:
+        text = 'The following paths were not found:\n' + '\n'.join(missing)
+    return web.Response(text=text)
 
 
 async def log_stream(stream, logger):
@@ -25,7 +43,7 @@ async def log_stream(stream, logger):
         logger.info(line)
 
 
-async def handle(request):
+async def handle_zip(request):
     name = request.match_info.get('name')
     if name not in dir_paths:
         return web.HTTPForbidden()
@@ -73,11 +91,13 @@ async def main(app):
 
 app = web.Application()
 app.add_routes([
-    web.get('/{name}', handle)
+    web.get('/{name}', handle_zip),
+    web.get('/admin/reload', handle_reload_list)
 ])
 app.on_startup.append(main)
 
 if __name__ == '__main__':
+    print('\n'.join(reload_list()))
     web.run_app(
         app,
         host='127.0.0.1',
