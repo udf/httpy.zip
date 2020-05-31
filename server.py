@@ -77,7 +77,8 @@ async def handle_zip(request):
     await log_stream(proc.stderr, ziplogger)
 
     watchdog.deregister(proc)
-    if proc.returncode != 0:
+    return_code = await asyncio.wait_for(proc.wait(), timeout=1)
+    if return_code != 0:
         logger.warning(
             'zip PID %s terminated with code %s',
             proc.pid,
