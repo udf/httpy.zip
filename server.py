@@ -20,16 +20,15 @@ def reload_list():
     missing = []
     for zip_name, path in dir_paths.items():
         if not os.path.exists(path):
-            missing.append(path)
+            missing.append('{}: {}'.format(zip_name, path))
+    if missing:
+        missing.insert(0, 'The following paths were not found:')
     return missing
 
 
 async def handle_reload_list(request):
     missing = reload_list()
-    text = ''
-    if missing:
-        text = 'The following paths were not found:\n' + '\n'.join(missing)
-    return web.Response(text=text)
+    return web.Response(text='\n'.join(missing))
 
 
 async def log_stream(stream, logger):
