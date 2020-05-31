@@ -47,15 +47,18 @@ async def handle_zip(request):
     name = request.match_info.get('name')
     if name not in dir_paths:
         return web.HTTPForbidden()
+    path = dir_paths[name]
+    if not os.path.exists(path):
+        return web.HTTPGone()
 
     response = web.StreamResponse(status=200)
     response.content_type = 'application/octet-stream'
     await response.prepare(request)
 
     chunk_size = 1024 * 1024
-    logger.info('Sending "%s" -> "%s"', dir_paths[name], name)
+    logger.info('Sending "%s" -> "%s"', path, name)
     proc = await asyncio.create_subprocess_exec(
-        'zip', '-r', '-0', '-', dir_paths[name],
+        'zip', '-r', '-0', '-', path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         limit=chunk_size
