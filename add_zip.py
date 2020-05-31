@@ -29,7 +29,7 @@ if name in paths and paths[name] != path:
 
 paths[name] = path
 
-print(urllib.parse.urljoin(host, name))
+print(urllib.parse.urljoin(host, urllib.parse.quote(name)))
 
 with open('zip_paths.json', 'w') as f:
     json.dump(paths, f)
