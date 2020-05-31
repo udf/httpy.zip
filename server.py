@@ -33,7 +33,7 @@ async def handle_reload_list(request):
 
 async def log_stream(stream, logger):
     while not stream.at_eof():
-        line = await stream.readline()
+        line = await stream.read(1024)
         logger.info(line.decode().strip())
 
 
