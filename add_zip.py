@@ -4,8 +4,9 @@ import json
 import os
 import sys
 import urllib.parse
+import urllib.request
 
-host = 'http://127.0.0.1:8420'
+from config import http_path, port
 
 if len(sys.argv) != 2:
     exit(1)
@@ -29,7 +30,13 @@ if name in paths and paths[name] != path:
 
 paths[name] = path
 
-print(urllib.parse.urljoin(host, urllib.parse.quote(name)))
+print(urllib.parse.urljoin(http_path, urllib.parse.quote(name)))
 
 with open('zip_paths.json', 'w') as f:
     json.dump(paths, f)
+
+print('Sending reload command...')
+host = 'http://127.0.0.1:{}'.format(port)
+url = urllib.parse.urljoin(host, '/admin/reload')
+with urllib.request.urlopen(url) as response:
+    print(response.read().decode())
