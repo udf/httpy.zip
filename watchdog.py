@@ -10,6 +10,7 @@ last_ping = {}
 
 def register(proc):
     processes[proc.pid] = proc
+    ping(proc)
     logger.info('PID %s registered', proc.pid)
 
 
