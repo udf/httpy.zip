@@ -11,7 +11,7 @@ if len(sys.argv) != 2:
     exit(1)
 
 path = os.path.abspath(sys.argv[1])
-name = os.path.split(path)[1]
+name = os.path.split(path)[1] + '.zip'
 
 if not os.path.exists(path):
     print('Not found:', path)
