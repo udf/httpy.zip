@@ -5,6 +5,8 @@ import os
 import shlex
 from aiohttp import web
 
+import config
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -47,7 +49,6 @@ async def handle_zip(request):
     response.content_type = 'application/octet-stream'
     await response.prepare(request)
 
-    chunk_size = 1024 * 1024
     logger.info('Sending "%s" -> "%s"', path, name)
     proc = None
     try:
@@ -55,7 +56,7 @@ async def handle_zip(request):
             'zip', '-r', '-0', '-', '.',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            limit=chunk_size,
+            limit=config.chunk_size,
             cwd=path
         )
         asyncio.ensure_future(log_stream(
@@ -64,7 +65,7 @@ async def handle_zip(request):
         ))
 
         while not proc.stdout.at_eof():
-            chunk = await proc.stdout.read(chunk_size)
+            chunk = await proc.stdout.read(config.chunk_size)
             if chunk:
                 await response.write(chunk)
 
@@ -94,5 +95,5 @@ if __name__ == '__main__':
     web.run_app(
         app,
         host='127.0.0.1',
-        port=8420
+        port=config.port
     )
