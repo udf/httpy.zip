@@ -8,5 +8,5 @@ chunk_size = 1024 * 1024
 # Every top level subdirectory of the path will be available at the web route,
 # but the root path will not be accessible
 route_dirs = {
-    '/web/route': '/path/to/files'
+    '/web/route/': '/path/to/files'
 }
