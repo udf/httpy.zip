@@ -5,8 +5,6 @@ import os
 import shlex
 from aiohttp import web
 
-import watchdog
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -51,40 +49,38 @@ async def handle_zip(request):
 
     chunk_size = 1024 * 1024
     logger.info('Sending "%s" -> "%s"', path, name)
-    proc = await asyncio.create_subprocess_exec(
-        'zip', '-r', '-0', '-', '.',
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        limit=chunk_size,
-        cwd=path
-    )
-    watchdog.register(proc)
-    asyncio.ensure_future(log_stream(
-        proc.stderr,
-        logging.getLogger('zip ({})'.format(proc.pid))
-    ))
-
-    while not proc.stdout.at_eof():
-        chunk = await proc.stdout.read(chunk_size)
-        if chunk:
-            watchdog.ping(proc)
-            await response.write(chunk)
-
-    watchdog.deregister(proc)
-    return_code = await asyncio.wait_for(proc.wait(), timeout=1)
-    if return_code != 0:
-        logger.warning(
-            'zip PID %s terminated with code %s',
-            proc.pid,
-            proc.returncode
+    proc = None
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            'zip', '-r', '-0', '-', '.',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            limit=chunk_size,
+            cwd=path
         )
-        return web.HTTPInternalServerError()
+        asyncio.ensure_future(log_stream(
+            proc.stderr,
+            logging.getLogger('zip ({})'.format(proc.pid))
+        ))
+
+        while not proc.stdout.at_eof():
+            chunk = await proc.stdout.read(chunk_size)
+            if chunk:
+                await response.write(chunk)
+
+        return_code = await asyncio.wait_for(proc.wait(), timeout=1)
+        if return_code != 0:
+            logger.warning(
+                'zip PID %s terminated with code %s',
+                proc.pid,
+                proc.returncode
+            )
+            return web.HTTPInternalServerError()
+    finally:
+        if proc:
+            proc.kill()
 
     return response
-
-
-async def main(app):
-    asyncio.ensure_future(watchdog.watchdog())
 
 
 app = web.Application()
@@ -92,7 +88,6 @@ app.add_routes([
     web.get('/{name}', handle_zip),
     web.get('/admin/reload', handle_reload_list)
 ])
-app.on_startup.append(main)
 
 if __name__ == '__main__':
     print('\n'.join(reload_list()))
