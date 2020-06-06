@@ -21,7 +21,7 @@ async def log_stream(stream, logger):
 async def handle_zip(request, root):
     subdir = request.match_info.get('subdir')
     path = os.path.join(root, subdir)
-    if not os.path.exists(path):
+    if not os.path.exists(path) or not os.path.isdir(path):
         return web.HTTPNotFound()
 
     response = web.StreamResponse(status=200)
