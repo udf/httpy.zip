@@ -66,8 +66,7 @@ async def handle_zip(request):
 
         while not proc.stdout.at_eof():
             chunk = await proc.stdout.read(config.chunk_size)
-            if chunk:
-                await response.write(chunk)
+            await response.write(chunk)
 
         return_code = await asyncio.wait_for(proc.wait(), timeout=1)
         if return_code != 0:
