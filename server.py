@@ -1,8 +1,8 @@
 import asyncio
-import json
 import logging
 import os
-import shlex
+import urllib.parse
+from functools import partial
 from aiohttp import web
 
 import config
@@ -10,25 +10,6 @@ import config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
-dir_paths = {}
-
-
-def reload_list():
-    global dir_paths
-    with open('zip_paths.json') as f:
-        dir_paths = json.load(f)
-    missing = []
-    for zip_name, path in dir_paths.items():
-        if not os.path.exists(path):
-            missing.append('{}: {}'.format(zip_name, path))
-    if missing:
-        missing.insert(0, 'The following paths were not found:')
-    return missing
-
-
-async def handle_reload_list(request):
-    missing = reload_list()
-    return web.Response(text='\n'.join(missing))
 
 
 async def log_stream(stream, logger):
@@ -37,19 +18,17 @@ async def log_stream(stream, logger):
         logger.info(line.decode().strip())
 
 
-async def handle_zip(request):
-    name = request.match_info.get('name')
-    if name not in dir_paths:
-        return web.HTTPForbidden()
-    path = dir_paths[name]
+async def handle_zip(request, root):
+    subdir = request.match_info.get('subdir')
+    path = os.path.join(root, subdir)
     if not os.path.exists(path):
-        return web.HTTPGone()
+        return web.HTTPNotFound()
 
     response = web.StreamResponse(status=200)
     response.content_type = 'application/octet-stream'
     await response.prepare(request)
 
-    logger.info('Sending "%s" -> "%s"', path, name)
+    logger.info('Sending "%s"', path)
     proc = None
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -84,13 +63,12 @@ async def handle_zip(request):
 
 
 app = web.Application()
-app.add_routes([
-    web.get('/{name}', handle_zip),
-    web.get('/admin/reload', handle_reload_list)
-])
+for route, root in config.route_dirs.items():
+    path = urllib.parse.urljoin(route, '{subdir}.zip')
+    logger.info('Route "%s" -> "%s"', path, root)
+    app.router.add_get(path, partial(handle_zip, root=root))
 
 if __name__ == '__main__':
-    print('\n'.join(reload_list()))
     web.run_app(
         app,
         host='127.0.0.1',
