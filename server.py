@@ -16,6 +16,8 @@ logger = logging.getLogger()
 async def log_stream(stream, logger):
     while not stream.at_eof():
         line = await stream.read(1024)
+        if not line:
+            continue
         logger.info(line.decode().strip())
 
 
