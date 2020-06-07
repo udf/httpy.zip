@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 import urllib.parse
 from functools import partial
 from aiohttp import web
@@ -20,8 +21,19 @@ async def log_stream(stream, logger):
 
 async def handle_zip(request, root):
     subdir = request.match_info.get('subdir')
-    path = os.path.join(root, subdir)
-    if not os.path.exists(path) or not os.path.isdir(path):
+
+    root = Path(root)
+    path = os.path.abspath(Path(root) / subdir)
+    # Only allow subdirectories of root
+    try:
+        subdir = Path(path).relative_to(root)
+    except ValueError:
+        return web.HTTPForbidden()
+    # Only allow a single level of traversal
+    if len(subdir.parents) != 1:
+        return web.HTTPForbidden()
+    # Only allow directories
+    if not os.path.isdir(path):
         return web.HTTPNotFound()
 
     response = web.StreamResponse(status=200)
@@ -67,6 +79,7 @@ async def handle_zip(request, root):
 
 app = web.Application()
 for route, root in config.route_dirs.items():
+    root = os.path.abspath(root)
     path = urllib.parse.urljoin(route, '{subdir}.zip')
     logger.info('Route "%s" -> "%s"', path, root)
     app.router.add_get(path, partial(handle_zip, root=root))
