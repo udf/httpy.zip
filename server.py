@@ -25,7 +25,7 @@ async def handle_zip(request, root):
     subdir = request.match_info.get('subdir')
 
     root = Path(root)
-    path = os.path.abspath(Path(root) / subdir)
+    path = os.path.abspath(str(root / subdir))
     # Only allow subdirectories of root
     try:
         subdir = Path(path).relative_to(root)
