@@ -56,8 +56,11 @@ async def handle_zip(request, root):
             )
             return web.HTTPInternalServerError()
     finally:
-        if proc:
-            proc.kill()
+        try:
+            if proc:
+                proc.kill()
+        except ProcessLookupError:
+            pass
 
     return response
 
