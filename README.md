@@ -41,3 +41,6 @@ Use a reverse proxy, see the sample nginx config file.
 
 ### Why are you running the zip command instead of doing the zipping in Python?
 I don't see any advantages to using only Python. Convince me and maybe I'll switch to pure Python.
+
+## TODO
+- A way to prevent certain directories from being zipped (perhaps a .nozip file in the directory)
